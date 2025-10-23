@@ -50,3 +50,28 @@ cat main.js >> $BUILD_JS
 echo "})();" >> $BUILD_JS
 echo "generate $OUTPUT_JS..."
 uglifyjs $BUILD_JS -o $OUTPUT_JS -c -m
+
+cat << EOF > dist/index.html
+<html>
+<head>
+  <title>Example</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <script src="BPlayer.min.js"></script>
+  <style>
+    video {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Bilibili 播放器</h1>
+    <video id='player1' src="https://videos.pexels.com/video-files/3195394/3195394-uhd_2560_1440_25fps.mp4"></video>
+  </div>
+  <script>
+    let player1 = new BPlayer('#player1');
+  </script>
+</body>
+</html>
+EOF
