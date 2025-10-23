@@ -361,7 +361,6 @@ class BPlayer {
     }
     const onMousemove = (e) => {
       moved = true;
-      try { e.preventDefault() } catch(err) {}
       let y = e.clientY;
       if (e.touches) y = e.touches[0].clientY;
       if (slider_mousedown) clearTimeout(idx);
