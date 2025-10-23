@@ -83,7 +83,7 @@ class BPlayer {
   <div class="control-btn previous" aria-label="上一个" style="display: none; transform: rotate(180deg)"><div class="icon">${svgs.next}</div></div>
   <div class="control-btn play" aria-label="播放/暂停"><div class="icon">${svgs.pause}${svgs.play}</div></div>
   <div class="control-btn next" aria-label="下一个" style="display: none"><div class="icon">${svgs.next}</div></div>
-  <div class="control-btn time" aria-label="时间显示"><input class="seek" style="display: none"/><label><span class="current">00:00</span><span class="divide">/</span><span class="duration">00:00</span></label></div>
+  <div class="control-btn time" aria-label="时间显示"><input class="seek" name="seek" style="display: none"/><span class="current">00:00</span><span class="divide">/</span><span class="duration">00:00</span></div>
 </div>
 <div class="bpx-player-control-bottom-right">
   <div class="control-btn playbackrate" aria-label="倍速"><div class="text">倍速</div><ul class="playbackrate-menu">${[2, 1.5, 1.25, 1, 0.75, 0.5].map(i => `<li class="item${i === 1 ? ' active' : ''}" data-value="${i}">${i}x</li>`).join('')}</ul></div>
