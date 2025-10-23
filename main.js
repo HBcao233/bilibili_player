@@ -37,6 +37,14 @@ class BPlayer {
   }
 
   createElements() {
+    // 样式
+    if (!document.querySelector('#bplayer-style')) {
+      const style = document.createElement('style');
+      style.id = 'bplayer-style';
+      style.innerHTML = styles;
+      document.body.appendChild(style);
+    }
+    
     const tooltip_incenter = tag('div', {
       class: 'bpx-player-tooltip-incenter',
       children: tag('div', {
@@ -386,13 +394,6 @@ class BPlayer {
    * 初始化
    */
   init() {
-    // 样式
-    document.addEventListener('DOMContentLoaded', () => {
-      const style = document.createElement('style');
-      style.innerHTML = styles;
-      document.body.appendChild(style);
-    })
-    
     /**
      * player 节点监听
      */
