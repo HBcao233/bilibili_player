@@ -33,6 +33,9 @@ class BPlayer {
         crossOrigin: 'anonymous',
       }
     });
+    
+    // 手机版点击一次显示
+    this.showed = false;
     this.init();
   }
 
@@ -89,19 +92,14 @@ class BPlayer {
   <div class="control-btn playbackrate" aria-label="倍速"><div class="text">倍速</div><ul class="playbackrate-menu">${[2, 1.5, 1.25, 1, 0.75, 0.5].map(i => `<li class="item${i === 1 ? ' active' : ''}" data-value="${i}">${i}x</li>`).join('')}</ul></div>
   <div class="control-btn volume" aria-label="音量"><div class="icon volume-icon">${svgs.volume}</div><div class="icon muted-icon" style="display: none">${svgs.volume_muted}</div><div class="volume-box"><div class="volume-number">100</div><div class="volume-slider"><div class="track"><div class="bar-wrap"><div class="bar"></div></div><div class="thumb"><div class="thumb-dot"></div></div></div></div></div></div>
   <div class="control-btn settings" aria-label="设置"><div class="icon">${svgs.settings}</div></div>
+  <div class="control-btn pip" aria-label="画中画"><div class="icon">${svgs.pip}</div></div>
   <div class="control-btn fullscreen" aria-label="全屏"><div class="icon">${svgs.fullscreen}</div></div>
 </div>`,
         }),
       ]
     });
-    // 加载中显示区域
-    const loading_panel = tag('div', {
-      class: 'bpx-player-loading-panel bpx-state-loading', children: tag('div', {
-        class: 'bpx-player-loading-panel-blur',
-        children: tag('div', { class: 'bpx-player-loading-panel-blur-detail' }),
-      })
-    });
-    // 加载中状态显示
+    
+    // 状态显示区域
     const state_wrap = tag('div', {
       class: 'bpx-player-state-wrap', children: [
         tag('div', { class: 'bpx-player-state-play' }),
@@ -117,6 +115,14 @@ class BPlayer {
         })
       ]
     });
+    // 加载中显示区域
+    const loading_panel = tag('div', {
+      class: 'bpx-player-loading-panel bpx-state-loading', children: tag('div', {
+        class: 'bpx-player-loading-panel-blur',
+        children: tag('div', { class: 'bpx-player-loading-panel-blur-detail' }),
+      })
+    });
+    
     // 视频区域
     const video_area = tag('div', {
       class: 'bpx-player-video-area', children: [
@@ -207,11 +213,11 @@ class BPlayer {
   playerEnter() {
     this.playerElement.style.cursor = 'pointer';
     this.playerElement.classList.add('hover');
-    if (isMobile()) {
-      this.playerElement.querySelector('.bpx-player-control').style.opacity = 1;
-    }
     clearTimeout(this.leave_timer);
-    this.leave_timer = setTimeout(() => this.playerLeave(), 3000);
+    this.leave_timer = setTimeout(() => {
+      this.playerLeave();
+      this.showed = false;
+    }, 3000);
   }
 
   /**
@@ -223,6 +229,7 @@ class BPlayer {
     const duration = this.duration;
     const buffered = video_buffered / duration;
 
+    if (!this.paused) this.playerElement.classList.remove('bpx-state-paused');
     const current = this.currentTime / duration;
     const total_px = this.progressElement.querySelector('.schedule').clientWidth;
     this.progressElement.querySelector('.buffer').style.transform = 'scaleX(' + buffered + ')';
@@ -232,9 +239,21 @@ class BPlayer {
   }
 
   /**
-   * 视频播放/暂停
+   * 视频点击
    */
   videoClick() {
+    if (isMobile() && !this.showed) {
+      this.showed = true;
+      this.playerEnter();
+      if (this.paused) this.play();
+      return;
+    }
+    this.playOrPause();
+  }
+  /**
+   * 视频播放/暂停
+   */
+  playOrPause() {
     if (this.paused) {
       this.play();
     } else {
@@ -396,16 +415,20 @@ class BPlayer {
     /**
      * player 节点监听
      */
-    this.playerElement.addEventListener('mouseenter', () => this.playerEnter());
-    this.playerElement.addEventListener('mousemove', () => this.playerEnter());
-    this.playerElement.addEventListener('mouseleave', () => this.playerLeave());
-    if (isMobile()) {
-      this.playerElement.addEventListener('touchstart', () => this.playerEnter());
-      this.playerElement.addEventListener('touchmove', () => this.playerEnter());
-      this.playerElement.addEventListener('touchend', () => this.playerLeave());
-    }
+    if (!isMobile()) {
+      this.playerElement.addEventListener('mouseenter', () => this.playerEnter());
+      this.playerElement.addEventListener('mousemove', () => this.playerEnter());
+      this.playerElement.addEventListener('mouseleave', () => this.playerLeave());
+    } 
     
+    // 画中画
+    this.playerElement.querySelector('.control-btn.pip').addEventListener('click', () => {
+      this.videoElement.requestPictureInPicture()
+    });
     // 全屏按钮
+    if (isMobile()) {
+      this.playerElement.querySelector('.control-btn.fullscreen').style.display = 'none';
+    }
     this.playerElement.querySelector('.control-btn.fullscreen').addEventListener('click', this.toggleFullscreen.bind(this));
     // 倍速
     this.initPlaybackrateButton(this.playerElement.querySelector('.control-btn.playbackrate'));
@@ -481,7 +504,7 @@ class BPlayer {
         // 播放/暂停
         case 'Space':
           e.preventDefault();
-          this.videoClick();
+          this.playOrPause();
           break;
         // 快退
         case 'ArrowLeft':
@@ -514,16 +537,28 @@ class BPlayer {
         this.canvas.height = 320;
       }
     });
+    /**
+     * 视频播放但音频没有播放
+     * （画中画时点播放按钮会出现这种情况）
+     */
+    this.videoElement.addEventListener('play', (e) => {
+      if (!document.pictureInPictureElement) return;
+      if (this.audioElement.paused) this.audioElement.play();
+    });
+    this.videoElement.addEventListener('pause', (e) => {
+      if (!document.pictureInPictureElement) return;
+      if (!this.audioElement.paused) this.audioElement.pause();
+    });
     
+    // 视频点击
     this.videoElement.addEventListener('click', () => this.videoClick());
-    this.playerElement.querySelector('.control-btn.play').addEventListener('click', () => this.videoClick());
+    // 播放暂停
+    this.playerElement.querySelector('.control-btn.play').addEventListener('click', () => this.playOrPause());
     this.videoElement.addEventListener('timeupdate', () => {
       if (this.progress_is_mousedown) return;
+      if (this.has_audio) return;
       this.progress_render();
     });
-    this.videoElement.addEventListener('error', (e) => {
-      console.warn('视频播放失败 ');
-    })
 
     this.videoElement.addEventListener('waiting', async () => {
       if (!this.waiting) {
@@ -547,8 +582,14 @@ class BPlayer {
      */
     let idx;
     const progress_func = (e) => {
-      let x = (e.clientX - this.progressElement.getBoundingClientRect().left + 2);
-      if (x < 0 || x > this.progressElement.clientWidth) return;
+      let clientX = e.clientX;
+      if (e.touches) {
+        if (e.touches.length == 0) return;
+        clientX = e.touches[0].clientX;
+      }
+      let x = (clientX - this.progressElement.getBoundingClientRect().left + 2);
+      if (x < 0) x = 0;
+      if (x > this.progressElement.clientWidth) x = this.progressElement.clientWidth;
       this.progressElement.querySelector('.move-indicator').style.left = x + 'px';
       this.progressElement.querySelector('.popup').style.left = x + 'px';
       const current = x / this.progressElement.clientWidth;
@@ -577,6 +618,10 @@ class BPlayer {
       this.canvas.getContext('2d').drawImage(this.videoElementPreview, 0, 0, this.canvas.width, this.canvas.height);
       this.progressElement.querySelector('.preview-image').src = this.canvas.toDataURL("image/png");
     })
+    
+    /**
+     * 进度条监听
+     */
     this.progressElement.addEventListener('mouseenter', (e) => {
       this.progressElement.classList.add('active');
       progress_func(e);
@@ -604,21 +649,53 @@ class BPlayer {
       if (!this.progress_is_mousedown) this.progressElement.classList.remove('active');
       this.progress_is_mousedown = false;
     });
+    let touched = false;
+    let moved = false;
+    if (isMobile) {
+      this.progressElement.addEventListener('touchstart', (e) => {
+        touched = true;
+        this.progressElement.classList.add('active');
+        progress_func(e);
+      });
+      document.addEventListener('touchmove', (e) => {
+        if (!touched) return;
+        if (!e.touches || e.touches.length == 0) return;
+        if (moved || e.target.closest('.bpx-player-progress')) {
+          moved = true;
+          progress_func(e);
+        }
+      });
+      document.addEventListener('touchend', (e) => {
+        if (touched && moved) {
+          this.currentTime = this.#newTime;
+        }
+        touched = false;
+        moved = false;
+      });
+    }
   }
 
   /**
    * @returns {String}
    */
-  get url() {
-    return this.#url;
+  get src() {
+    return this.videoElement.src;
   }
   /**
    * @param {String} u
    */
-  set url(u) {
-    this.#url = u;
+  set src(u) {
     this.videoElement.src = u;
     this.videoElementPreview.src = u;
+  }
+  
+  get srcObject() {
+    return this.videoElement.srcObject;
+  }
+  
+  set srcObject(v) {
+    this.videoElement.srcObject = v;
+    this.videoElementPreview.srcObject = v;
   }
 
   /**
