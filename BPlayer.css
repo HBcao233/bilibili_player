@@ -43,7 +43,6 @@
 .bpx-player video {
   width: 100%;
   background: black;
-  transition: transform .3s;
 }
 .bpx-player-video-area {
   position: relative;
@@ -241,6 +240,7 @@
   opacity: 0;
   transition: opacity .2s ease-in;
 }
+
 .bpx-player.hover .bpx-player-control-mask,
 .bpx-player:has(.control-btn:hover) .bpx-player-control-mask,
 .bpx-player:has(.bpx-player-progress:hover) .bpx-player-control-mask,
@@ -270,9 +270,12 @@
   transition: transform .1s cubic-bezier(0,0,.2,1);
   width: 100%;
 }
-.bpx-player-progress.active, .bpx-player-progress:hover {
+
+.bpx-player-progress.active, 
+.bpx-player-progress:hover {
   height: 6px;
 }
+
 .bpx-player-progress .schedule {
   width: 100%;
   height: 100%;
@@ -287,7 +290,9 @@
   position: absolute;
   pointer-events: none;
 }
-.bpx-player-progress .buffer, .bpx-player-progress .current {
+
+.bpx-player-progress .buffer, 
+.bpx-player-progress .current {
   bottom: 0;
   left: 0;
   position: absolute;
@@ -304,6 +309,7 @@
 .bpx-player-progress .current {
   background-color: var(--bpx-primary-color, #00AEEC);
 }
+
 .bpx-player-progress .thumb {
   height: 20px;
   width: 20px;
@@ -313,9 +319,11 @@
   transform: translateX(-50%) scale(0);
   transition: transform .2s;
 }
-.bpx-player-progress.active .thumb-icon {
+.bpx-player-progress.active .thumb-icon,
+.bpx-player.hover .thumb-icon {
   transform: translateX(-50%) scale(1);
 }
+
 .bpx-player-progress .move-indicator {
   height: 16px;
   margin-left: -4px;

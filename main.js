@@ -452,72 +452,130 @@ class BPlayer {
     /**
      * 监听键盘
      */
-    document.addEventListener('keydown', async (e) => {
-      if (e.target.closest('input')) return;
-      switch (e.code) {
-        case 'F11':
-        case 'KeyF':
-        case 'Space':
+    if (!isMobile()) {
+      document.addEventListener('keydown', async (e) => {
+        if (e.target.closest('input')) return;
+        switch (e.code) {
+          case 'F11':
+          case 'KeyF':
+          case 'Space':
+            e.preventDefault();
+            break;
+          // 快退
+          case 'ArrowLeft':
+            e.preventDefault();
+            this.videoBackwardStart();
+            break;
+          // 快进
+          case 'ArrowRight':
+            e.preventDefault();
+            this.videoForwardStart();
+            break;
+          case 'ArrowUp':
+          case 'ArrowDown':
+            e.preventDefault();
+            break;
+        }
+      })
+      document.addEventListener('keyup', async (e) => {
+        if (e.target.closest('input')) return;
+        switch (e.code) {
+          // 上一条
+          case 'BracketLeft':
+          case 'ArrowUp':
+            e.preventDefault();
+            await previousVideo();
+            break;
+          // 下一条
+          case 'BracketRight':
+          case 'ArrowDown':
+            e.preventDefault();
+            await nextVideo();
+            break;
+          // 点赞
+          case 'KeyQ':
+            await likeClick();
+            break;
+          // 全屏
+          case 'F11':
+          case 'KeyF':
+            e.preventDefault();
+            this.toggleFullscreen();
+            break;
+          // 播放/暂停
+          case 'Space':
+            e.preventDefault();
+            this.playOrPause();
+            break;
+          // 快退
+          case 'ArrowLeft':
+            e.preventDefault();
+            this.videoBackwardEnd();
+            break;
+          // 快进
+          case 'ArrowRight':
+            e.preventDefault();
+            this.videoForwardEnd();
+            break;
+        }
+      })
+    } else {
+      let longPressTimer = null;
+      const longPressDuration = 500;
+      let state = 0;
+      let lastTapTime = 0;
+      let touchTimer = null;
+      // 双击时间间隔阈值（毫秒）
+      const DOUBLE_TAP_DELAY = 300;
+      let lastTouchX = 0;
+      
+      this.videoElement.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+      });
+      this.videoElement.addEventListener('touchstart', (e) => {
+        lastTouchX = e.touches[0].clientX;
+        longPressTimer = setTimeout(() => {
+          const rect = this.videoElement.getBoundingClientRect();
+          if ((lastTouchX - rect.left) > rect.width / 2) {
+            state = 1;
+            this.videoForwardStart();
+          } else {
+            state = 2;
+            this.videoBackwardStart();
+          }
+        }, longPressDuration);
+      });
+      this.videoElement.addEventListener('touchend', (e) => {
+        clearTimeout(longPressTimer);
+        if (state == 1) this.videoForwardEnd();
+        else if (state == 2) this.videoBackwardEnd();
+        state = 0;
+        
+        // 双击事件监听
+        const currentTime = Date.now();
+        const tapInterval = currentTime - lastTapTime;
+        clearTimeout(touchTimer);
+        if (tapInterval < DOUBLE_TAP_DELAY && tapInterval > 0) {
+          // 双击逻辑
           e.preventDefault();
-          break;
-        // 快退
-        case 'ArrowLeft':
-          e.preventDefault();
-          this.videoBackwardStart();
-          break;
-        // 快进
-        case 'ArrowRight':
-          e.preventDefault();
-          this.videoForwardStart();
-          break;
-        case 'ArrowUp':
-        case 'ArrowDown':
-          e.preventDefault();
-          break;
-      }
-    })
-    document.addEventListener('keyup', async (e) => {
-      if (e.target.closest('input')) return;
-      switch (e.code) {
-        // 上一条
-        case 'BracketLeft':
-        case 'ArrowUp':
-          e.preventDefault();
-          await previousVideo();
-          break;
-        // 下一条
-        case 'BracketRight':
-        case 'ArrowDown':
-          e.preventDefault();
-          await nextVideo();
-          break;
-        // 点赞
-        case 'KeyQ':
-          await likeClick();
-          break;
-        // 全屏
-        case 'F11':
-        case 'KeyF':
-          e.preventDefault();
-          this.toggleFullscreen();
-          break;
-        // 播放/暂停
-        case 'Space':
-          e.preventDefault();
-          this.playOrPause();
-          break;
-        // 快退
-        case 'ArrowLeft':
-          e.preventDefault();
-          this.videoBackwardEnd();
-          break;
-        // 快进
-        case 'ArrowRight':
-          e.preventDefault();
-          this.videoForwardEnd();
-          break;
-      }
-    })
+          const rect = this.videoElement.getBoundingClientRect();
+          if ((lastTouchX - rect.left) > rect.width / 2) {
+            this.videoForwardEnd();
+          } else {
+            this.videoBackwardEnd();
+          }
+        } else {
+          touchTimer = setTimeout(() => {
+            // 单击
+            this.videoClick();
+          }, DOUBLE_TAP_DELAY);
+        }
+        lastTapTime = currentTime;
+      });
+      this.videoElement.addEventListener('touchmove', (e) => {
+        clearTimeout(longPressTimer);
+      });
+    }
 
     /**
      * 视频节点监听
@@ -551,7 +609,7 @@ class BPlayer {
     });
     
     // 视频点击
-    this.videoElement.addEventListener('click', () => this.videoClick());
+    if (!isMobile()) this.videoElement.addEventListener('click', () => this.videoClick());
     // 播放暂停
     this.playerElement.querySelector('.control-btn.play').addEventListener('click', () => this.playOrPause());
     this.videoElement.addEventListener('timeupdate', () => {
@@ -561,16 +619,20 @@ class BPlayer {
     });
 
     this.videoElement.addEventListener('waiting', async () => {
+      if (this.frameSyncing) return;
       if (!this.waiting) {
         this.waiting = true;
         this.playerElement.classList.add('bpx-state-buff');
       }
     })
     this.videoElement.addEventListener('playing', () => {
+      if (this.frameSyncing) {
+        this.frameSyncing = false;
+      }
       if (this.waiting) {
         this.waiting = false;
-        this.playerElement.classList.remove('bpx-state-buff');
       }
+      this.playerElement.classList.remove('bpx-state-buff');
     });
     // 播放结束
     this.videoElement.addEventListener('ended', () => {
